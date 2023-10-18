@@ -1,0 +1,29 @@
+version: '3.7'
+
+services:
+  backend:
+    build: .
+    container_name: "FastAPI"
+    entrypoint: ["bash", "entrypoint.sh"]
+    ports:
+    - "8000:8000"
+    volumes:
+      - .:/usr/src/app/
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres
+    container_name: 'postgres'
+    volumes:
+      - auth:/var/lib/postgresql/data/
+    ports:
+      - "5433:5432"
+    env_file:
+      - .env
+
+volumes:
+  auth:
+    external: true
