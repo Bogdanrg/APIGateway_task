@@ -15,6 +15,7 @@ repos:
         language_version: python3
         args:
           [
+            --exclude=migrations/env.py,
             --max-line-length=90
           ]
   - repo: https://github.com/pre-commit/pre-commit-hooks
