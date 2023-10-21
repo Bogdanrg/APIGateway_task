@@ -1,13 +1,15 @@
-from typing import Unpack
+from typing import Generic, TypeVar, Unpack
 
 from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.database import Base
 
+T = TypeVar("T", bound=Base)
+
 
 class BaseRepository:
-    table: Base
+    table = Generic[T]
 
     @classmethod
     async def insert_one(cls, session: AsyncSession, **kwargs: Unpack) -> Base:

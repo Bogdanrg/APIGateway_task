@@ -1,13 +1,22 @@
 import datetime
 
 import jwt
-from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 from config import app_settings
+from exceptions import (
+    EmailUniquenessException,
+    ExpiredTokenException,
+    InvalidRefreshTokenException,
+    InvalidTokenException,
+    InvalidTokenTypeException,
+    PasswordMissmatchException,
+    UsernameUniquenessException,
+    UserNotFoundException,
+)
 from repos.user_repo import UserRepository
 from schemas import SignUpModel
 from users.models import User
@@ -32,13 +41,13 @@ class UserService:
             user.username, session
         )
         if user_username is not None:
-            raise HTTPException(
+            raise UsernameUniquenessException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Username must be unique",
             )
         user_email = await UserRepository.get_user_by_email(user.email, session)
         if user_email is not None:
-            raise HTTPException(
+            raise EmailUniquenessException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Email must be unique"
             )
 
@@ -58,9 +67,9 @@ class UserService:
     ) -> None:
         user = await UserRepository.get_user_by_username(username, session)
         if not user:
-            raise HTTPException(status_code=400, detail="Invalid user")
+            raise UserNotFoundException(status_code=400, detail="Invalid user")
         if not HasherService.verify_password(password, user.password):
-            raise HTTPException(status_code=400, detail="Invalid password")
+            raise PasswordMissmatchException(status_code=400, detail="Invalid password")
 
 
 class JWTService:
@@ -108,11 +117,11 @@ class JWTService:
                 algorithms=app_settings.ALGORITHM,
             )
         except jwt.ExpiredSignatureError:
-            raise HTTPException(
+            raise ExpiredTokenException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Token has been expired"
             )
         except (jwt.DecodeError, jwt.InvalidTokenError):
-            raise HTTPException(
+            raise InvalidTokenException(
                 status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid token"
             )
 
@@ -122,7 +131,9 @@ class JWTService:
         if payload:
             token_type = payload.get("type", "")
             if token_type != "refresh_token":
-                raise HTTPException(status_code=400, detail="Wrong token type")
+                raise InvalidTokenTypeException(
+                    status_code=400, detail="Wrong token type"
+                )
             user = await UserRepository.get_user_by_username(
                 payload.get("username", ""), session
             )
@@ -133,4 +144,6 @@ class JWTService:
                 tokens = {"access_token": access_token, "refresh_token": refresh_token}
                 return tokens
 
-        raise HTTPException(status_code=400, detail="Invalid refresh token")
+        raise InvalidRefreshTokenException(
+            status_code=400, detail="Invalid refresh token"
+        )

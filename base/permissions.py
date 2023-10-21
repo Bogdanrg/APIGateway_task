@@ -1,7 +1,8 @@
-from fastapi import HTTPException, Request
+from fastapi import Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from base.classes import AsyncSessionManager
+from exceptions import AuthenticationSchemeException, AuthorizationCodeException
 from repos.user_repo import UserRepository
 from users.services import JWTService
 
@@ -17,7 +18,7 @@ class JWTBearer(HTTPBearer):
             ).__call__(request)
             if credentials:
                 if not credentials.scheme == "Bearer":
-                    raise HTTPException(
+                    raise AuthenticationSchemeException(
                         status_code=403, detail="Invalid authentication scheme."
                     )
                 payload: dict = await JWTService.decode_token(credentials.credentials)
@@ -25,6 +26,6 @@ class JWTBearer(HTTPBearer):
                     payload["username"], session
                 )
             else:
-                raise HTTPException(
+                raise AuthorizationCodeException(
                     status_code=403, detail="Invalid authorization code."
                 )
